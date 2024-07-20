@@ -25,24 +25,29 @@ def export_flow(flow_name: str, flow_type: str, dict_flows: dict) -> dict:
 
 
 def export_flows(flows_names: list, dict_flows:dict={}) -> dict:
-    for flow_name, flow_type in flows_names:
-        if flow_name in dict_flows.keys():
-            continue         
+    flows_dependencies = []
+    for flow_name, flow_type in flows_names:     
         dict_flows = export_flow(flow_name, flow_type, dict_flows)
+        if (flow_name, flow_type) in flows_dependencies:
+            flows_dependencies.remove((flow_name, flow_type))  
         if dict_flows[flow_name].flow is not None:
             dependencies = dict_flows[flow_name].flow.get_dependencies('flows')
-            flows_dependencies = [(flow_name, flow_type) for flow_name, flow_type in dependencies if flow_name not in dict_flows.keys() and flow_name not in flows_names]
-            if flows_dependencies:
-                while True:
-                    os.system('cls')
-                    tipos = [f'{index} - {flow_name}: {flow_type}' for index, (flow_name, flow_type) in enumerate(flows_dependencies)]
-                    index_flow = int(input(f'Digite tipos de flows que você quer EXPORTAR: \n{'\n'.join(tipos)}\nOu digite -1 caso não queira exportar esses fluxos\nOpção: '))          
-                    if index_flow == -1:
-                        break
-                    dict_flows = export_flows([flows_dependencies[index_flow]], dict_flows)
-                    flows_dependencies = [(flow_name, flow_type) for flow_name, flow_type in dependencies if flow_name not in dict_flows.keys() and flow_name not in flows_names]
-                    if flows_dependencies:
-                        break  
+            flows_dependencies.extend([(flow_name, flow_type) for flow_name, flow_type in dependencies if flow_name not in dict_flows.keys() and flow_name not in flows_names and (flow_name, flow_type) not in flows_dependencies])
+
+    if flows_dependencies:
+        while True:
+            os.system('cls')
+            tipos = [f'{index} - {flow_name}: {flow_type}' for index, (flow_name, flow_type) in enumerate(flows_dependencies)]
+            index_flow = int(input(f'Digite o indice do fluxo que você quer exportar: \n{'\n'.join(tipos)}\nOu digite -1 caso não queira exportar esses fluxos\nOpção: '))          
+            if index_flow == -1:
+                break
+            dict_flows = export_flow(flows_dependencies[index_flow][0], flows_dependencies[index_flow][1], dict_flows)
+            if dict_flows[flows_dependencies[index_flow][0]].flow is not None:
+                dependencies = dict_flows[flows_dependencies[index_flow][0]].flow.get_dependencies('flows')
+                flows_dependencies.extend([(flow_name, flow_type) for flow_name, flow_type in dependencies if flow_name not in dict_flows.keys() and (flow_name, flow_type) not in flows_dependencies])
+            flows_dependencies.pop(index_flow)
+            if not flows_dependencies:
+                break  
 
     return dict_flows
 
@@ -80,10 +85,10 @@ if False:
     flows_names = export_flows(list_flows)
     exit()
 
-name_flow = 'PRD_IVR_Reservas_V8_Modulo' 
+name_flow = 'PRD_IVR_Reservas_V8_Modulo1' 
 type_flow = 'inboundCall'
 flows = archy.api.get_flows(flow_name_or_description=name_flow, type_flow=type_flow).entities
-list_flows = [(flow_name.name, flow_name.type) for flow_name in flows]
+list_flows = [(flow_name.name, flow_name.type.lower()) for flow_name in flows]
 print(f'EXPORTANDO {len(list_flows)} FLUXOS')
 print('\n'.join([f'{flow_name} - {flow_type}' for flow_name, flow_type in list_flows]))
 flows_names = export_flows(list_flows)
