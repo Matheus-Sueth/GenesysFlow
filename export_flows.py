@@ -1,4 +1,5 @@
 import os
+from time import sleep
 from genesys.archy import Archy
 
 caminho = r'flows/'
@@ -24,23 +25,19 @@ def export_flow(flow_name: str, flow_type: str, dict_flows: dict) -> dict:
     return dict_flows
 
 
-def export_flows(flows_names: list, dict_flows:dict={}) -> dict:
-    flows_dependencies = []
-    for flow_name, flow_type in flows_names:     
-        dict_flows = export_flow(flow_name, flow_type, dict_flows)
-        if (flow_name, flow_type) in flows_dependencies:
-            flows_dependencies.remove((flow_name, flow_type))  
-        if dict_flows[flow_name].flow is not None:
-            dependencies = dict_flows[flow_name].flow.get_dependencies('flows')
-            flows_dependencies.extend([(flow_name, flow_type) for flow_name, flow_type in dependencies if flow_name not in dict_flows.keys() and flow_name not in flows_names and (flow_name, flow_type) not in flows_dependencies])
-
+def export_flows(flows_dependencies: list, dict_flows:dict={}) -> dict:
     if flows_dependencies:
         while True:
             os.system('cls')
             tipos = [f'{index} - {flow_name}: {flow_type}' for index, (flow_name, flow_type) in enumerate(flows_dependencies)]
-            index_flow = int(input(f'Digite o indice do fluxo que você quer exportar: \n{'\n'.join(tipos)}\nOu digite -1 caso não queira exportar esses fluxos\nOpção: '))          
-            if index_flow == -1:
+            entrada_index_flow = input(f'Digite o indice do fluxo que você quer exportar: \n{'\n'.join(tipos)}\n{len(flows_dependencies)} - Sair\nOpção: ')          
+            index_flow = int(entrada_index_flow) if entrada_index_flow.isdigit() else -2
+            if index_flow == len(flows_dependencies):
                 break
+            if index_flow < 0 or index_flow >= len(flows_dependencies):
+                print('Opção inválida, tente denovo')
+                sleep(3)
+                continue 
             dict_flows = export_flow(flows_dependencies[index_flow][0], flows_dependencies[index_flow][1], dict_flows)
             if dict_flows[flows_dependencies[index_flow][0]].flow is not None:
                 dependencies = dict_flows[flows_dependencies[index_flow][0]].flow.get_dependencies('flows')
